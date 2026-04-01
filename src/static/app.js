@@ -580,6 +580,14 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `
         }
+        <div class="share-section">
+          <button class="share-button" aria-label="Share ${name}">📤 Share</button>
+          <div class="share-panel hidden">
+            <button class="share-option copy-link-btn">📋 Copy Link</button>
+            <a class="share-option" href="" target="_blank" rel="noopener noreferrer" data-role="whatsapp-share">💬 WhatsApp</a>
+            <a class="share-option" href="" target="_blank" rel="noopener noreferrer" data-role="email-share">📧 Email</a>
+          </div>
+        </div>
       </div>
     `;
 
@@ -598,6 +606,52 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Set up share button and panel
+    const shareButton = activityCard.querySelector(".share-button");
+    const sharePanel = activityCard.querySelector(".share-panel");
+    const copyLinkBtn = activityCard.querySelector(".copy-link-btn");
+    const whatsappLink = activityCard.querySelector('[data-role="whatsapp-share"]');
+    const emailLink = activityCard.querySelector('[data-role="email-share"]');
+
+    // Build share content
+    const schedule = formatSchedule(details);
+    const shareTitle = `${name} - Mergington High School`;
+    const shareText = `Join "${name}" at Mergington High School! ${details.description} Schedule: ${schedule}`;
+    const pageUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${pageUrl}#${encodeURIComponent(name)}`;
+
+    // Set share link hrefs
+    whatsappLink.href = `https://wa.me/?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`;
+    emailLink.href = `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`;
+
+    shareButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      // Close any other open panels first
+      document.querySelectorAll(".share-panel").forEach((p) => {
+        if (p !== sharePanel) p.classList.add("hidden");
+      });
+      if (navigator.share) {
+        navigator.share({ title: shareTitle, text: shareText, url: shareUrl })
+          .catch((err) => {
+            if (err.name !== "AbortError") console.error("Error sharing:", err);
+          });
+      } else {
+        sharePanel.classList.toggle("hidden");
+      }
+    });
+
+    copyLinkBtn.addEventListener("click", () => {
+      const textToCopy = `${shareText}\n${shareUrl}`;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => showMessage("Activity details copied to clipboard!", "success"))
+          .catch(() => showMessage("Unable to copy to clipboard.", "error"));
+      } else {
+        showMessage("Unable to copy to clipboard.", "error");
+      }
+      sharePanel.classList.add("hidden");
+    });
 
     activitiesList.appendChild(activityCard);
   }
@@ -865,6 +919,12 @@ document.addEventListener("DOMContentLoaded", () => {
       showMessage("Failed to sign up. Please try again.", "error");
       console.error("Error signing up:", error);
     }
+  });
+
+  // Close share panels when clicking outside
+  document.addEventListener("click", () => {
+    const openPanel = document.querySelector(".share-panel:not(.hidden)");
+    if (openPanel) openPanel.classList.add("hidden");
   });
 
   // Expose filter functions to window for future UI control
